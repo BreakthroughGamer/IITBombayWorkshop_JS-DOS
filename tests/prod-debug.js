@@ -6,6 +6,7 @@ import { Tail } from "tail";
 import path from "path";
 import { fileURLToPath } from "url";
 import chalk from "chalk";
+import { promises as fsPromises } from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,12 +34,44 @@ const build = async () => {
   });
 };
 
+function cpSync(source, destination, options = {}) {
+  const { recursive = true, force = true } = options;
+
+  const sourceStats = fs.statSync(source);
+
+  if (sourceStats.isDirectory()) {
+    if (!recursive) {
+      throw new Error(`Source is a directory, but recursive option is not set`);
+    }
+
+    // Ensure destination directory exists
+    fs.mkdirSync(destination, { recursive: true });
+
+    // Copy each item in the directory
+    for (const item of fs.readdirSync(source)) {
+      const sourcePath = path.join(source, item);
+      const destinationPath = path.join(destination, item);
+
+      cpSync(sourcePath, destinationPath, options); // Recursively copy
+    }
+  } else {
+    // Copy file
+    if (fs.existsSync(destination) && !force) {
+      throw new Error(`Destination file ${destination} already exists, and force is not set`);
+    }
+    fs.copyFileSync(source, destination);
+  }
+}
+
 /* copy the task to the Desktop Node runtime folder */
 const copyWebpackedFile = async () => {
   const debugConfig = await Debugger.getConfig();
   console.log("debugConfig", debugConfig);
   const nodeDIR = debugConfig.nodeDir;
   const sourcePath = __dirname + "/" + debugConfig.webpackedFilePath;
+  const sourceGameFolderPath = __dirname + "/../src/task/game";
+  const destGameFolderPath = nodeDIR + "/executables" + "/game";
+
   const desktopNodeExecutablePath = nodeDIR + "/" + debugConfig.destinationPath;
   const desktopNodeLogPath = nodeDIR + "/" + debugConfig.logPath;
   const keywords = debugConfig.keywords;
@@ -52,6 +85,7 @@ const copyWebpackedFile = async () => {
   console.log(
     `Copying webpacked file from ${sourcePath} to ${desktopNodeExecutablePath}...`,
   );
+  cpSync(sourceGameFolderPath, destGameFolderPath, { recursive: true });
 
   fs.copyFile(sourcePath, desktopNodeExecutablePath, async (err) => {
     if (err) {
@@ -61,6 +95,8 @@ const copyWebpackedFile = async () => {
       tailLogs(desktopNodeLogPath, keywords, taskID);
     }
   });
+
+
 };
 
 /* tail logs */

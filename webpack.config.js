@@ -1,8 +1,12 @@
+
+import path from "path";
+import HtmlWebpackPlugin from "html-webpack-plugin";
+import CopyWebpackPlugin from "copy-webpack-plugin";
+import CopyPlugin from "copy-webpack-plugin";
+
 export default {
-  entry: "./src/index.js",
+  entry: "./src/index.js", // Entry point for your JS code
   target: "node",
-  // When uploading to arweave use the production mode
-  // mode:"production",
   mode: "development",
   devtool: "source-map",
   optimization: {
@@ -14,4 +18,12 @@ export default {
   node: {
     __dirname: true,
   },
+  plugin:{
+    
+  },
+  module: {
+    rules: [
+      {test: /\.html$/,use:["html-loader"]}
+    ]
+  }
 };
